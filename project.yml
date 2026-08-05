@@ -11,11 +11,6 @@ settings:
     DEVELOPMENT_TEAM: TAFDRXJZSR
     CODE_SIGN_STYLE: Automatic
 
-packages:
-  Sparkle:
-    url: https://github.com/sparkle-project/Sparkle
-    from: 2.6.0
-
 targets:
   Lidless:
     type: application
@@ -35,10 +30,6 @@ targets:
         CFBundleIconName: AppIcon
         LSMinimumSystemVersion: "13.0"
         NSHumanReadableCopyright: "© 2026 Nghia Luong"
-        SUFeedURL: https://raw.githubusercontent.com/nghialuong/Lidless/main/docs/appcast.xml
-        SUPublicEDKey: pmOUhSI4qLDIbgndphAMYGc/oZJIk9Nw9KdEcmJBSOY=
-        SUEnableAutomaticChecks: true
-        SUScheduledCheckInterval: 86400
     settings:
       base:
         MARKETING_VERSION: "0.1.2"
@@ -56,8 +47,6 @@ targets:
       - target: LidlessHelper
         copy:
           destination: executables
-      - package: Sparkle
-        product: Sparkle
     postBuildScripts:
       # Generate the privileged helper's LaunchDaemon plist from the app's bundle
       # id so the Release and `.dev` builds register isolated daemons. Runs before
@@ -121,7 +110,7 @@ targets:
       - Tests/LidlessTests
       - Sources/Shared
       # Depend only on AppKit/SwiftUI, so they compile straight into the test
-      # bundle — which can't link the app target (Sparkle).
+      # bundle rather than linking the app target.
       - Sources/Lidless/SettingsWindowController.swift
       - Sources/Lidless/MenuBarExtraPanel.swift
     settings:

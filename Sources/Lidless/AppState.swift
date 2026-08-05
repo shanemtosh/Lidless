@@ -75,10 +75,6 @@ final class AppState: ObservableObject {
     private let loginItem = LoginItemManager()
     private lazy var onboarding = OnboardingController(state: self)
 
-    /// The app's Sparkle updater. Owned here rather than by `LidlessApp` so the
-    /// settings window controller below can hand it to `SettingsView`.
-    let updater = UpdaterController()
-
     private lazy var settingsWindow = SettingsWindowController(
         contentSize: SettingsView.preferredSize
     ) { [weak self] in
@@ -86,7 +82,6 @@ final class AppState: ObservableObject {
         return AnyView(
             SettingsView()
                 .environmentObject(self)
-                .environmentObject(self.updater)
         )
     }
 

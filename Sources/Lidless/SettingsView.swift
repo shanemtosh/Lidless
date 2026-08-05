@@ -9,7 +9,6 @@ struct SettingsView: View {
     static let preferredSize = CGSize(width: 420, height: 460)
 
     @EnvironmentObject var state: AppState
-    @EnvironmentObject var updater: UpdaterController
 
     private let repoURL = URL(string: "https://github.com/nghialuong/Lidless")!
 
@@ -68,12 +67,6 @@ struct SettingsView: View {
                 }
             }
             .disabled(state.settings.autoEnableWhenCharging)
-
-            Section("Updates") {
-                Toggle("Check for updates automatically", isOn: $updater.automaticallyChecksForUpdates)
-                Button("Check for Updates…") { updater.checkForUpdates() }
-                    .disabled(!updater.canCheckForUpdates)
-            }
 
             Section("About") {
                 HStack(spacing: 12) {
