@@ -5,7 +5,9 @@ import Foundation
 // Mach service name is handed in by the LaunchDaemon plist (per build config), so
 // the same binary serves both the Release and the `.dev` daemons.
 let machLabel = ProcessInfo.processInfo.environment[LidlessHelper.machLabelEnvKey] ?? LidlessHelper.fallbackLabel
-let delegate = HelperListenerDelegate()
+// The label also names the owning app, which is half of the client code-signing
+// requirement the delegate enforces on every incoming connection.
+let delegate = HelperListenerDelegate(machLabel: machLabel)
 let listener = NSXPCListener(machServiceName: machLabel)
 listener.delegate = delegate
 listener.resume()
