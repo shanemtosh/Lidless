@@ -30,13 +30,36 @@ else
 fi
 
 echo "==> Building signed Release"
-xcodebuild build \
+# Full output to a log; only the interesting lines to the terminal. On failure the
+# whole log is dumped — a filtered view that hides the actual error is worse than
+# no filter at all.
+LOG="$DERIVED/build.log"
+mkdir -p "$DERIVED"
+if xcodebuild build \
   -scheme Lidless \
   -configuration Release \
   -destination 'generic/platform=macOS' \
   -derivedDataPath "$DERIVED" \
-  -allowProvisioningUpdates \
-  | grep -E "error:|warning: .*(deprecat|unused)|BUILD SUCCEEDED|BUILD FAILED" || true
+  -allowProvisioningUpdates > "$LOG" 2>&1
+then
+  grep -E "BUILD SUCCEEDED" "$LOG" || true
+else
+  echo "--- build failed; last 40 lines of $LOG ---" >&2
+  tail -40 "$LOG" >&2
+  if grep -q errSecInternalComponent "$LOG"; then
+    cat >&2 <<'HINT'
+
+errSecInternalComponent means codesign could not use the private key.
+Populate the key's access control list, then re-run this script:
+
+  security set-key-partition-list -S apple-tool:,apple:,codesign: \
+    -s ~/Library/Keychains/login.keychain-db
+
+It prompts for your login password (twice is normal).
+HINT
+  fi
+  exit 1
+fi
 
 BUILT="$DERIVED/Build/Products/Release/Lidless.app"
 if [[ ! -d "$BUILT" ]]; then
