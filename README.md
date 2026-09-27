@@ -31,6 +31,14 @@ is the `SleepDisabled` flag in `IOPMrootDomain` (what `sudo pmset -a disableslee
 The app talks to a root helper over XPC; the helper flips the flag with no admin prompt and
 runs a heartbeat watchdog. If the app stops checking in (>90s), the helper restores sleep.
 
+While keep-awake is active, the menu-bar app also holds a macOS display-sleep
+assertion so an idle display does not turn off and trigger the password screen
+during computer use. Turning keep-awake off (including safety pauses and timers)
+releases it; quitting or crashing also releases it automatically. Password settings
+are unchanged. Explicit locking, independent screen-saver policies, and closing
+the lid can still lock or remove the usable display: keep the lid open for GUI
+agents, or use a supported external-display setup.
+
 ## Architecture
 
 - **`Lidless`** — SwiftUI `MenuBarExtra` app (macOS 13+), not sandboxed, `LSUIElement`.

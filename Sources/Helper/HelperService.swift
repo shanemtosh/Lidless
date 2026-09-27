@@ -1,21 +1,75 @@
 import Foundation
+import Security
 
 final class HelperListenerDelegate: NSObject, NSXPCListenerDelegate {
     private let service = HelperService()
 
+    /// Code-signing requirement every client must satisfy, derived once at start-up
+    /// from the helper's own signature. Nil means we could not establish who we
+    /// are, in which case we accept nobody.
+    private let clientRequirement: String?
+
+    init(machLabel: String) {
+        clientRequirement = Self.makeClientRequirement(machLabel: machLabel)
+        super.init()
+        if clientRequirement == nil {
+            NSLog("[LidlessHelper] no client requirement could be derived — refusing all connections")
+        }
+    }
+
     func listener(_ listener: NSXPCListener,
                   shouldAcceptNewConnection newConnection: NSXPCConnection) -> Bool {
+        // Fail closed. This daemon runs as root on a Mach service any local process
+        // can reach; without a requirement we cannot distinguish the app from
+        // anything else on the machine, so we refuse rather than guess.
+        guard let clientRequirement else { return false }
+
+        // Rejects connections whose signature doesn't match, before any message
+        // on this connection reaches `service`.
+        newConnection.setCodeSigningRequirement(clientRequirement)
+
         newConnection.exportedInterface = NSXPCInterface(with: LidlessHelperProtocol.self)
         newConnection.exportedObject = service
         newConnection.resume()
         return true
+    }
+
+    private static func makeClientRequirement(machLabel: String) -> String? {
+        guard let appBundleID = ClientRequirement.appBundleID(fromHelperLabel: machLabel) else {
+            NSLog("[LidlessHelper] mach label %@ is not a helper label", machLabel)
+            return nil
+        }
+        guard let teamID = ownTeamIdentifier() else {
+            NSLog("[LidlessHelper] could not read own team identifier (unsigned or ad-hoc build?)")
+            return nil
+        }
+        return ClientRequirement.requirement(appBundleID: appBundleID, teamID: teamID)
+    }
+
+    /// The team identifier from the helper's own code signature. Using our own
+    /// team rather than a hardcoded constant keeps forks and Debug builds working
+    /// without editing this file.
+    private static func ownTeamIdentifier() -> String? {
+        var code: SecCode?
+        guard SecCodeCopySelf(SecCSFlags(), &code) == errSecSuccess, let code else { return nil }
+
+        var staticCode: SecStaticCode?
+        guard SecCodeCopyStaticCode(code, SecCSFlags(), &staticCode) == errSecSuccess,
+              let staticCode else { return nil }
+
+        var info: CFDictionary?
+        let flags = SecCSFlags(rawValue: kSecCSSigningInformation)
+        guard SecCodeCopySigningInformation(staticCode, flags, &info) == errSecSuccess,
+              let signing = info as? [String: Any] else { return nil }
+
+        return signing[kSecCodeInfoTeamIdentifier as String] as? String
     }
 }
 
 /// The actual privileged work. Runs as root, so it can call `pmset` directly
 /// with no admin prompt. Guards against a stuck-awake state with a watchdog.
 final class HelperService: NSObject, LidlessHelperProtocol {
-    private let queue = DispatchQueue(label: "com.nghialuong.lidless.helper.state")
+    private let queue = DispatchQueue(label: "com.shanemcintosh.lidless.helper.state")
     private var lastHeartbeat = Date()
     private var keepAwake = false
     private let watchdogTimeout: TimeInterval = 90

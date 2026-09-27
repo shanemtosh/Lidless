@@ -4,7 +4,9 @@ import Foundation
 
 @MainActor
 final class AppState: ObservableObject {
-    @Published var isEnabled = false
+    @Published var isEnabled = false {
+        didSet { updateDisplayAwake() }
+    }
     @Published var helperInstalled = false
     @Published var helperNeedsApproval = false
     @Published var batteryDescription = ""
@@ -70,14 +72,11 @@ final class AppState: ObservableObject {
     /// Reads the flag on every path — `pmset -g` needs no privileges — and also
     /// writes it when the helper isn't installed.
     private let power = PowerManager()
+    private let displayAwake = DisplayAwakeController()
     private let battery = BatteryMonitor()
     private let store = SettingsStore()
     private let loginItem = LoginItemManager()
     private lazy var onboarding = OnboardingController(state: self)
-
-    /// The app's Sparkle updater. Owned here rather than by `LidlessApp` so the
-    /// settings window controller below can hand it to `SettingsView`.
-    let updater = UpdaterController()
 
     private lazy var settingsWindow = SettingsWindowController(
         contentSize: SettingsView.preferredSize
@@ -86,7 +85,6 @@ final class AppState: ObservableObject {
         return AnyView(
             SettingsView()
                 .environmentObject(self)
-                .environmentObject(self.updater)
         )
     }
 
@@ -492,6 +490,15 @@ final class AppState: ObservableObject {
     func refreshState() {
         let token = sync.beginRead()
         applyObserved(power.isSleepDisabled(), token)
+        // Retry a failed assertion even when the system flag hasn't changed.
+        updateDisplayAwake()
+    }
+
+    private func updateDisplayAwake() {
+        let result = displayAwake.setActive(isEnabled)
+        if result != 0 {
+            NSLog("Lidless display-awake assertion failed: %d", result)
+        }
     }
 
     private func applyObserved(_ observed: Bool?, _ token: StateSync.ReadToken) {

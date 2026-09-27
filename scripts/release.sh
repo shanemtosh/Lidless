@@ -7,7 +7,7 @@
 #
 # Prereqs (one-time):
 #   xcrun notarytool store-credentials lidless-notary \
-#       --apple-id "you@example.com" --team-id TAFDRXJZSR --password <app-specific-pw>
+#       --apple-id "you@example.com" --team-id J5UN47TT86 --password <app-specific-pw>
 #   # Sparkle signing key (prints the base64 public key for Info.plist SUPublicEDKey):
 #   "$(./scripts/release.sh --print-sparkle-tool generate_keys)"   # or run generate_keys directly
 #
