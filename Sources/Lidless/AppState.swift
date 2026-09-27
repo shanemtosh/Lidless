@@ -4,7 +4,9 @@ import Foundation
 
 @MainActor
 final class AppState: ObservableObject {
-    @Published var isEnabled = false
+    @Published var isEnabled = false {
+        didSet { updateDisplayAwake() }
+    }
     @Published var helperInstalled = false
     @Published var helperNeedsApproval = false
     @Published var batteryDescription = ""
@@ -70,6 +72,7 @@ final class AppState: ObservableObject {
     /// Reads the flag on every path — `pmset -g` needs no privileges — and also
     /// writes it when the helper isn't installed.
     private let power = PowerManager()
+    private let displayAwake = DisplayAwakeController()
     private let battery = BatteryMonitor()
     private let store = SettingsStore()
     private let loginItem = LoginItemManager()
@@ -487,6 +490,15 @@ final class AppState: ObservableObject {
     func refreshState() {
         let token = sync.beginRead()
         applyObserved(power.isSleepDisabled(), token)
+        // Retry a failed assertion even when the system flag hasn't changed.
+        updateDisplayAwake()
+    }
+
+    private func updateDisplayAwake() {
+        let result = displayAwake.setActive(isEnabled)
+        if result != 0 {
+            NSLog("Lidless display-awake assertion failed: %d", result)
+        }
     }
 
     private func applyObserved(_ observed: Bool?, _ token: StateSync.ReadToken) {

@@ -112,6 +112,7 @@ targets:
       # Depend only on AppKit/SwiftUI, so they compile straight into the test
       # bundle rather than linking the app target.
       - Sources/Lidless/SettingsWindowController.swift
+      - Sources/Lidless/DisplayAwakeController.swift
       - Sources/Lidless/MenuBarExtraPanel.swift
     settings:
       base:
